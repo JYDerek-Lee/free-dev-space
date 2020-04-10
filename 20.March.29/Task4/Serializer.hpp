@@ -1,7 +1,8 @@
 #include <mutex>
 #include <memory>
 #include <queue>
-#include <iostream>
+#include <future>
+#include "timer.hpp"
 
 namespace task
 {
@@ -9,18 +10,18 @@ namespace task
 class Serializer
 {
 public:
-    enum class TaskType : uint16_t
-    {
-        kUndefined = 0,
-        kFileStream = 1,
-    };
-
     struct task_data
     {
-        int a;
+        std::function<void(void*)> func{};
+        void *user_data {};
     };
 
 public:
+    ~Serializer()
+    {
+        this->scheduler.stop();
+    }
+
     Serializer(Serializer &) = delete;
     Serializer(Serializer &&) = delete;
     Serializer(Serializer const &) = delete;
@@ -39,27 +40,30 @@ public:
         return *(serializer_.get());
     }
 
-    void set_task(Serializer::TaskType type,
-                  task_data *data);
+    void set_task(task_data &&data);
 
 private:
-    Serializer();
-    void run_task();
+    Serializer()
+    {
+        this->scheduler.set_function([&]() {
+            if (!q.empty())
+            {
+                auto task = q.front();
+                task.func(task.user_data);
+                q.pop();
+            }
+        },
+                                     500);
+
+        this->scheduler.start();
+    }
 
 private:
-    std::queue<task_data *> q{};
+    std::queue<task_data> q{};
+    Timer scheduler{};
 
     static std::unique_ptr<Serializer> serializer_;
     static std::once_flag serializer_once_;
 };
 
-std::unique_ptr<Serializer> serializer_;
-std::once_flag serializer_once_;
-
 } // namespace task
-
-// int main()
-// {
-//     int a = 0;
-//     auto &serializer = task::Serializer::get_serializer();
-// }

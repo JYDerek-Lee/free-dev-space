@@ -1,28 +1,14 @@
 #include "serializer.hpp"
-#include <future>
-
-constexpr int default_priority = 3;
 
 namespace task
 {
 
-Serializer::Serializer()
-{
-    // std::async(std::launch::async,
-    //            [this]() {
-    //                this->run_task();
-    //            });
-}
+std::unique_ptr<Serializer> Serializer::serializer_;
+std::once_flag Serializer::serializer_once_;
 
-void Serializer::set_task(Serializer::TaskType type,
-                          Serializer::task_data *data)
+void Serializer::set_task(Serializer::task_data &&data)
 {
-    this->q.emplace(default_priority, data);
-}
-
-void Serializer::run_task()
-{
-    std::cout << "Test" << std::endl;
+    this->q.emplace(data);
 }
 
 } // namespace task

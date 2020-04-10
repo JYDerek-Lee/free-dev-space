@@ -4,7 +4,11 @@
 namespace task
 {
 
-std::string Store::get_value(std::string &&str)
+std::unique_ptr<Store> Store::store_;
+std::once_flag Store::store_once_;
+
+std::string Store::get_value(std::string &&str,
+                             std::string &&value)
 {
     auto time_sec = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     if (time_data_[str] >= time_sec)

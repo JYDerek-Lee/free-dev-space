@@ -9,11 +9,29 @@ namespace task
 class Store
 {
 public:
+    enum class store_event_type
+    {
+        kUndefined = 0,
+        kGetValue,
+        kSetValue
+    };
+
+    struct store_data
+    {
+    public:
+        std::string key{};
+        std::string value{};
+        store_event_type etype{};
+    };
+
+public:
     static Store &get_store_instance()
     {
         std::call_once(store_once_, []() {
             store_.reset(new Store());
         });
+
+        return *(store_.get());
     };
     ~Store() = default;
 
@@ -26,7 +44,28 @@ public:
     Store operator=(Store const &) = delete;
 
 public:
-    std::string get_value(std::string &&str);
+    static void get_event(void *user_data)
+    {
+        auto data = static_cast<store_data*>(user_data);
+
+        switch (data->etype)
+        {
+        case store_event_type::kSetValue:
+        {
+            get_store_instance().set_value(std::move(data->key),
+                                           std::move(data->value));
+        }
+        break;
+
+        case store_event_type::kGetValue:
+        {
+        }
+        break;
+        }
+    }
+
+    std::string get_value(std::string &&str,
+                          std::string &&value);
     void set_value(std::string &&key,
                    std::string &&value);
     void expire_value(std::string &&key,
@@ -44,8 +83,5 @@ private:
     static std::unique_ptr<Store> store_;
     static std::once_flag store_once_;
 };
-
-std::unique_ptr<Store> store_;
-std::once_flag store_once_;
 
 } // namespace task
